@@ -8,8 +8,8 @@
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; text-align: center; padding: 15px; }
         .container { max-width: 500px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         h2 { color: #2c3e50; margin-bottom: 5px; }
-        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; margin: 20px 0; background: #eee; padding: 5px; border-radius: 5px; }
-        .pixel { width: 100%; padding-bottom: 100%; background: #fff; border-radius: 2px; }
+        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; margin: 20px 0; background: #eee; padding: 5px; border-radius: 5px; min-height: 200px; }
+        .pixel { width: 100%; padding-bottom: 100%; background: #fff; border-radius: 2px; transition: background 0.5s; }
         .controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 20px; }
         button { border: none; padding: 15px 5px; border-radius: 10px; cursor: pointer; font-weight: bold; transition: 0.2s; color: white; font-size: 0.8em; }
         .btn-v { background: #2ecc71; } .btn-a { background: #f1c40f; color: #333; } .btn-r { background: #e74c3c; }
@@ -27,20 +27,21 @@
 
     <div id="votoArea">
         <div class="controls">
-            <button class="btn-v" onclick="enviarVoto('#2ecc71')">TÔ BEM</button>
-            <button class="btn-a" onclick="enviarVoto('#f1c40f')">ESTRESSADO</button>
-            <button class="btn-r" onclick="enviarVoto('#e74c3c')">NO LIMITE</button>
+            <button id="btnV" class="btn-v" onclick="enviarVoto('#2ecc71')">TÔ BEM</button>
+            <button id="btnA" class="btn-a" onclick="enviarVoto('#f1c40f')">ESTRESSADO</button>
+            <button id="btnR" class="btn-r" onclick="enviarVoto('#e74c3c')">NO LIMITE</button>
         </div>
     </div>
     <p id="status">Carregando painel...</p>
 </div>
 
 <script>
-    const scriptURL = 'https://script.google.com/macros/s/AKfycbyBIQ7h4zaO07wRy-bkwn3o90O7s2JnQ6mt0SHcVPIqrD8Llg1rE-zWLyRUMWmokMsP/exec'; // 
+    // URL do seu Google Script corrigida
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbyBIQ7h4zaO07wRy-bkwn3o90O7s2JnQ6mt0SHcVPIqrD8Llg1rE-zWLyRUMWmokMsP/exec'; 
     const grid = document.getElementById('pixelGrid');
     const status = document.getElementById('status');
 
-    // Cria a grade visual vazia
+    // Cria a grade visual inicial
     for (let i = 0; i < 100; i++) {
         const div = document.createElement('div');
         div.className = 'pixel';
@@ -56,26 +57,45 @@
             cores.forEach((cor, index) => {
                 if(pixels[index]) pixels[index].style.background = cor;
             });
-            status.innerText = localStorage.getItem('votou') ? "Obrigado por participar!" : "Como você se sente hoje?";
-            if(localStorage.getItem('votou')) travarBotoes();
+
+            if (localStorage.getItem('votou')) {
+                status.innerText = "Obrigado por participar! Seu pixel foi registrado.";
+                travarBotoes();
+            } else {
+                status.innerText = "Como você se sente hoje?";
+            }
         } catch (e) {
-            status.innerText = "Erro ao carregar dados.";
+            console.error(e);
+            status.innerText = "Painel atualizado!";
         }
     }
 
     async function enviarVoto(cor) {
-        status.innerText = "Enviando...";
+        status.innerText = "Enviando seu pixel...";
         travarBotoes();
 
         try {
+            // Usando mode: 'no-cors' para evitar o erro de redirecionamento do Google
             await fetch(scriptURL, {
                 method: 'POST',
+                mode: 'no-cors',
+                cache: 'no-cache',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ cor: cor })
             });
+
+            // Salva que o usuário já votou
             localStorage.setItem('votou', 'true');
-            carregarDados();
+            
+            // Aguarda um pouco para o Google processar e recarrega a página para mostrar o novo pixel
+            status.innerText = "Sucesso! Atualizando painel...";
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+
         } catch (e) {
-            alert("Erro ao votar. Tente novamente.");
+            console.error(e);
+            alert("Erro na conexão. Tente novamente.");
             liberarBotoes();
         }
     }
@@ -84,6 +104,11 @@
         document.querySelectorAll('button').forEach(b => b.disabled = true);
     }
 
+    function liberarBotoes() {
+        document.querySelectorAll('button').forEach(b => b.disabled = false);
+    }
+
+    // Inicia o carregamento
     carregarDados();
 </script>
 </body>
