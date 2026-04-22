@@ -40,6 +40,7 @@
     const grid = document.getElementById('pixelGrid');
     const status = document.getElementById('status');
 
+    // Inicializa a grade
     for (let i = 0; i < 100; i++) {
         const div = document.createElement('div');
         div.className = 'pixel';
@@ -48,11 +49,12 @@
 
     async function carregarDados() {
         try {
-            // Adicionamos um timestamp para evitar que o navegador use o cache antigo
+            // Timestamp evita cache para que o painel atualize de verdade
             const response = await fetch(scriptURL + '?t=' + new Date().getTime());
             const cores = await response.json();
             const pixels = document.querySelectorAll('.pixel');
             
+            pixels.forEach(p => p.style.background = '#fff'); // Reseta visualmente antes de colorir
             cores.forEach((cor, index) => {
                 if(pixels[index]) pixels[index].style.background = cor;
             });
@@ -64,7 +66,8 @@
                 status.innerText = "Como você se sente hoje?";
             }
         } catch (e) {
-            status.innerText = "Painel atualizado!";
+            console.error("Erro ao carregar:", e);
+            status.innerText = "Painel pronto!";
         }
     }
 
@@ -72,25 +75,22 @@
         status.innerText = "Enviando seu pixel...";
         travarBotoes();
 
-        // Criamos um formulário invisível para enviar os dados
-        // Esta é a forma MAIS SEGURA de o Google Sheets receber sem bloquear
-        const formData = new FormData();
-        formData.append('cor', cor);
+        // Enviando como parâmetros de URL (forma mais robusta para o Google Apps Script)
+        const urlComParametros = scriptURL + "?cor=" + encodeURIComponent(cor);
 
-        fetch(scriptURL, {
+        fetch(urlComParametros, {
             method: 'POST',
-            mode: 'no-cors', // Mantido para evitar erro de redirecionamento
-            body: new URLSearchParams(formData)
+            mode: 'no-cors' 
         })
         .then(() => {
             localStorage.setItem('votou', 'true');
             status.innerText = "Sucesso! Atualizando...";
             setTimeout(() => {
                 location.reload();
-            }, 1000);
+            }, 1200);
         })
         .catch(e => {
-            console.error(e);
+            console.error("Erro no envio:", e);
             alert("Erro ao enviar. Tente novamente.");
             liberarBotoes();
         });
@@ -104,6 +104,7 @@
         document.querySelectorAll('button').forEach(b => b.disabled = false);
     }
 
+    // Chama a função ao abrir a página
     carregarDados();
 </script>
 </body>
