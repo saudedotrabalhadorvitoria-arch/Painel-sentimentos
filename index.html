@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Pixel de Sentimentos</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; text-align: center; padding: 15px; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        h2 { color: #2c3e50; margin-bottom: 5px; }
+        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; margin: 20px 0; background: #eee; padding: 5px; border-radius: 5px; }
+        .pixel { width: 100%; padding-bottom: 100%; background: #fff; border-radius: 2px; }
+        .controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 20px; }
+        button { border: none; padding: 15px 5px; border-radius: 10px; cursor: pointer; font-weight: bold; transition: 0.2s; color: white; font-size: 0.8em; }
+        .btn-v { background: #2ecc71; } .btn-a { background: #f1c40f; color: #333; } .btn-r { background: #e74c3c; }
+        button:disabled { background: #ccc; cursor: not-allowed; opacity: 0.6; }
+        #status { margin-top: 15px; font-weight: bold; color: #7f8c8d; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Pixel de Sentimentos</h2>
+    <p>Saúde Mental no Trabalho</p>
+    
+    <div class="grid" id="pixelGrid"></div>
+
+    <div id="votoArea">
+        <div class="controls">
+            <button class="btn-v" onclick="enviarVoto('#2ecc71')">TÔ BEM</button>
+            <button class="btn-a" onclick="enviarVoto('#f1c40f')">ESTRESSADO</button>
+            <button class="btn-r" onclick="enviarVoto('#e74c3c')">NO LIMITE</button>
+        </div>
+    </div>
+    <p id="status">Carregando painel...</p>
+</div>
+
+<script>
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbyBIQ7h4zaO07wRy-bkwn3o90O7s2JnQ6mt0SHcVPIqrD8Llg1rE-zWLyRUMWmokMsP/exec'; // 
+    const grid = document.getElementById('pixelGrid');
+    const status = document.getElementById('status');
+
+    // Cria a grade visual vazia
+    for (let i = 0; i < 100; i++) {
+        const div = document.createElement('div');
+        div.className = 'pixel';
+        grid.appendChild(div);
+    }
+
+    async function carregarDados() {
+        try {
+            const response = await fetch(scriptURL);
+            const cores = await response.json();
+            const pixels = document.querySelectorAll('.pixel');
+            
+            cores.forEach((cor, index) => {
+                if(pixels[index]) pixels[index].style.background = cor;
+            });
+            status.innerText = localStorage.getItem('votou') ? "Obrigado por participar!" : "Como você se sente hoje?";
+            if(localStorage.getItem('votou')) travarBotoes();
+        } catch (e) {
+            status.innerText = "Erro ao carregar dados.";
+        }
+    }
+
+    async function enviarVoto(cor) {
+        status.innerText = "Enviando...";
+        travarBotoes();
+
+        try {
+            await fetch(scriptURL, {
+                method: 'POST',
+                body: JSON.stringify({ cor: cor })
+            });
+            localStorage.setItem('votou', 'true');
+            carregarDados();
+        } catch (e) {
+            alert("Erro ao votar. Tente novamente.");
+            liberarBotoes();
+        }
+    }
+
+    function travarBotoes() {
+        document.querySelectorAll('button').forEach(b => b.disabled = true);
+    }
+
+    carregarDados();
+</script>
+</body>
+</html>
